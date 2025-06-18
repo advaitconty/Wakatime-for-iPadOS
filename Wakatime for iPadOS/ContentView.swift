@@ -9,10 +9,11 @@ import SwiftUI
 
 
 
-struct ContentView: View {
+struct HomeView: View {
     @State var selectedProject: String = ""
     @AppStorage("apikey") var apiKey: String = ""
-    @AppStorage("wakatime-server") var serverUrl: String = ""
+    @AppStorage("wakatime-server") var serverUrl: String = "https://api.wakatime.com/api/v1/"
+    @AppStorage("timeInterval") var timeInterval: Int = 30
     @State var showHackatimeMacSetupPopup: Bool = false
     @Environment(\.dismiss) var dismiss
     @State var macQuickSetupText: String = ""
@@ -21,6 +22,9 @@ struct ContentView: View {
     @State var errorString: String?
     @State var showError: Bool = false
     @State var shoText: [String] = ["", ""]
+    @State var message: MessageItem = MessageItem(showMessage: false, message: "")
+    @State var selectedURL: URL?
+    @State var showFilePicker = false
     
     func performHackaTimeCommand(_ command: String) async throws -> (pingStatusCode: Int, successText: String, api_key: String, api_url: String) {
         let pattern = "export\\s+([A-Z0-9_]+)=\\\"([^\\\"]+)\\\""
@@ -213,7 +217,69 @@ struct ContentView: View {
                     }
                 }
             
-            TextField("Wakatime API Key", text: $serverUrl)
+            HStack {
+                Text("WakaTime API Key: ")
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
+                TextField("Wakatime Instance URL", text: $apiKey)
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
+                    .textFieldStyle(.roundedBorder)
+            }
+            .frame(width: 750)
+            
+            HStack {
+                Text("WakaTime Instance URL: ")
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
+                TextField("Wakatime Instance URL", text: $serverUrl)
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
+                    .textFieldStyle(.roundedBorder)
+            }
+            .frame(width: 750)
+            
+            HStack {
+                Text("heartbeat_rate_limit:")
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
+                TextField("120 (default)", value: $timeInterval, format: .number)
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
+                    .textFieldStyle(.roundedBorder)
+            }
+            .frame(width: 750)
+            
+            Button {
+                Task {
+                    do {
+                        let result = try await sendWakaTimeHeartbeat(apiKey: apiKey, apiURLString: serverUrl)
+                        message = MessageItem(showMessage: true, message: result.message)
+                    } catch {
+                        print("error: \(error.localizedDescription)")
+                    }
+                }
+            } label: {
+                Label("Send Heartbeat", systemImage: "arrow.up.heart.fill")
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
+            }
+            .buttonStyle(.bordered)
+            
+            if message.showMessage {
+                Text(message.message)
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
+                Button {
+                    message.showMessage = false
+                } label: {
+                    Label("Close", systemImage: "xmark")
+                }
+                .buttonStyle(.bordered)
+            }
+            
+            Button {
+                showFilePicker = true
+            } label: {
+                Text("Select folder")
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
+            }
+            .buttonStyle(.borderedProminent)
+            .sheet(isPresented: $showFilePicker) {
+                DocumentPicker(selectedURL: $selectedURL)
+            }
         }
         .padding()
         .sheet(isPresented: $showHackatimeMacSetupPopup) {
@@ -223,5 +289,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    HomeView()
 }

@@ -11,7 +11,7 @@ import SwiftUI
 struct Wakatime_for_iPadOSApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            HomeView()
         }
     }
 }
